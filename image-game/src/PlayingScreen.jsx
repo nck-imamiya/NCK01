@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { motion } from 'framer-motion';
 import FeedbackOverlay from './FeedbackOverlay';
 import PlayerCutIn from './PlayerCutIn';
 import MessageBox from './MessageBox';
@@ -20,6 +21,25 @@ export default function PlayingScreen({
   const currentImg = quizImages[currentIdx];
   const visiblePanelsCount = panels.filter(p => p.visible).length;
   const currentMaxPoints = visiblePanelsCount * basePoint * (isDoublePoints ? 2 : 1);
+
+  // ダーツが刺さったパネルを管理する状態
+  const [hitPanels, setHitPanels] = useState({});
+
+  // 問題が切り替わったらダーツの状態をリセット
+  useEffect(() => {
+    setHitPanels({});
+  }, [currentIdx]);
+
+  // パネルクリック時の演出用ハンドラ
+  const handlePanelClick = (id) => {
+    if (hitPanels[id] || isStageLoading) return;
+    setHitPanels(prev => ({ ...prev, [id]: true }));
+    
+    // ダーツが飛んで刺さる演出を待ってからパネルを開く（1秒後に実行）
+    setTimeout(() => {
+      removePanel(id);
+    }, 1000);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
@@ -84,7 +104,7 @@ export default function PlayingScreen({
                           return (
                             <div
                               key={`${rIdx}-${cIdx}`}
-                              onClick={() => removePanel(pieceId)}
+                                onClick={() => handlePanelClick(pieceId)}
                               className={`relative flex items-center justify-center cursor-pointer transition-all duration-500 box-border
                                 ${piece.visible ? `${piece.color} opacity-100` : 'opacity-0 pointer-events-none scale-90 blur-xl'}
                                 ${!hasTop ? 'border-t-[6px]' : 'border-t-[1px] border-white/10'}
@@ -105,6 +125,18 @@ export default function PlayingScreen({
                                   </span>
                                 </div>
                               )}
+
+                                {/* ダーツ演出 (テトリス) - ピースの最初のセルにのみ表示 */}
+                                {hitPanels[pieceId] && cellIndexInPiece === 0 && (
+                                  <motion.img
+                                    src="/dart.png"
+                                    initial={{ x: 200, y: -200, opacity: 0, scale: 1.5, rotate: -15 }}
+                                    animate={{ x: 0, y: 0, opacity: 1, scale: 0.8, rotate: -15 }}
+                                    transition={{ type: 'spring', stiffness: 200, damping: 25, duration: 0.8 }}
+                                    className="absolute z-50 w-24 h-24 pointer-events-none"
+                                    style={{ filter: 'drop-shadow(4px 8px 12px rgba(0,0,0,0.7))' }}
+                                  />
+                                )}
                             </div>
                           );
                         })
@@ -113,7 +145,7 @@ export default function PlayingScreen({
                       panels.map(p => (
                         <div
                           key={p.id}
-                          onClick={() => removePanel(p.id)}
+                          onClick={() => handlePanelClick(p.id)}
                           className={`relative flex items-center justify-center cursor-pointer transition-all duration-500 transform overflow-hidden
                             ${p.visible ? `${p.color} opacity-100` : 'opacity-0 pointer-events-none scale-90 blur-xl'}
                             border border-black/20
@@ -127,6 +159,18 @@ export default function PlayingScreen({
                             ))}
                           </div>
                           {p.visible && <div className={`absolute inset-0 pointer-events-none border-t-[2px] border-l-[2px] border-white/20`}></div>}
+
+                            {/* ダーツ演出 (通常パネル) */}
+                            {hitPanels[p.id] && (
+                              <motion.img
+                                src="/dart.png"
+                                initial={{ x: 200, y: -200, opacity: 0, scale: 2, rotate: -15 }}
+                                animate={{ x: 0, y: 0, opacity: 1, scale: 1, rotate: -15 }}
+                                transition={{ type: 'spring', stiffness: 150, damping: 20, duration: 0.8 }}
+                                className="absolute z-50 w-28 h-28 pointer-events-none"
+                                style={{ filter: 'drop-shadow(6px 12px 16px rgba(0,0,0,0.8))' }}
+                              />
+                            )}
                         </div>
                       ))
                     )}
