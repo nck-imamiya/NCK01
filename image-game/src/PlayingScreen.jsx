@@ -71,11 +71,11 @@ export default function PlayingScreen({
 
       <div className="relative z-10 w-full max-w-5xl flex flex-col items-center">
         <div className="text-white mb-8 text-center">
-          <div className="inline-block px-4 py-1 bg-white/10 rounded-full text-[10px] font-black mb-3 backdrop-blur-sm border border-white/10 uppercase tracking-[0.3em] text-indigo-300">
-            {gameMode === 'category' 
-              ? `${currentImg.genre} / ${currentImg.pointValue}pts` 
-              : `第 {currentIdx + 1} 問 / 全 {quizImages.length} 問`}
-          </div>
+          {gameMode === 'category' && (
+            <div className="inline-block px-4 py-1 bg-white/10 rounded-full text-[10px] font-black mb-3 backdrop-blur-sm border border-white/10 uppercase tracking-[0.3em] text-indigo-300">
+              {`${currentImg.genre} / ${currentImg.pointValue}pts`}
+            </div>
+          )}
           <h2 className="text-5xl font-black tracking-tighter text-white drop-shadow-2xl italic">
             獲得可能: <span className="text-indigo-400 font-mono">{currentMaxPoints}</span> <span className="text-xl italic font-normal text-white/50">PTS</span>
           </h2>

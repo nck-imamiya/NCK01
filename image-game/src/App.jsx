@@ -27,6 +27,7 @@ export default function App() {
     feedback, cutIn, msg, showAlert,
     basePoint,
     startGame,
+    startTestGame,
     handleAnswer,
     getGridClass,
     selectCategoryQuiz,
@@ -51,6 +52,7 @@ export default function App() {
         quizImages={quizImages}
         handleFolderSelect={handleFolderSelect} fileInputRef={fileInputRef}
         startGame={startGame}
+        startTestGame={startTestGame}
         setGameState={setGameState}
         msg={msg}
       />

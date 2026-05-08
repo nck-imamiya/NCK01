@@ -56,12 +56,8 @@ export const useGameManager = (quizImages, setQuizImages) => {
     setTimeout(() => setMsg({ text: '', visible: false }), 2000);
   };
 
-  // ゲーム開始
-  const startGame = () => {
-    if (quizImages.length === 0) {
-      showAlert("画像を読み込んでください。");
-      return;
-    }
+  // 共通の開始処理
+  const executeGameStart = () => {
     setIsStageLoading(true);
     setPlayers(prev => prev.map(p => ({ ...p, score: 0 }))); // スコアをリセット
     setCurrentPlayerIdx(0);
@@ -81,6 +77,26 @@ export const useGameManager = (quizImages, setQuizImages) => {
       setCutIn(prev => ({ ...prev, visible: false }));
       setIsStageLoading(false);
     }, 2000);
+  };
+
+  // 通常のゲーム開始
+  const startGame = () => {
+    if (quizImages.length === 0) {
+      showAlert("画像を読み込んでください。");
+      return;
+    }
+    executeGameStart();
+  };
+
+  // テストモードで開始
+  const startTestGame = () => {
+    const mock = [
+      { url: 'https://placehold.jp/44/4f46e5/ffffff/1280x720.png?text=TEST%20QUESTION%201', name: 'テスト1', genre: 'テスト', pointValue: 100, isPlayed: false, settings: { scale: 1, x: 0, y: 0 } },
+      { url: 'https://placehold.jp/44/10b981/ffffff/1280x720.png?text=TEST%20QUESTION%202', name: 'テスト2', genre: 'テスト', pointValue: 200, isPlayed: false, settings: { scale: 1, x: 0, y: 0 } },
+      { url: 'https://placehold.jp/44/f59e0b/ffffff/1280x720.png?text=TEST%20QUESTION%203', name: 'テスト3', genre: 'テスト', pointValue: 300, isPlayed: false, settings: { scale: 1, x: 0, y: 0 } }
+    ];
+    setQuizImages(mock);
+    executeGameStart();
   };
 
   // パネルの初期化
@@ -227,6 +243,7 @@ export const useGameManager = (quizImages, setQuizImages) => {
     isTransitioning, setIsTransitioning,
     basePoint,
     startGame,
+    startTestGame,
     initPanels,
     handleAnswer,
     nextTurn,
