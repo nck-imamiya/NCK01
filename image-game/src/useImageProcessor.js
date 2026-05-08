@@ -18,9 +18,18 @@ export const useImageProcessor = (quizImages, setQuizImages, showAlert) => {
     imageFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
+        const pathParts = file.webkitRelativePath.split('/');
+        // ルート/ジャンル/点数/ファイル名 の構造を想定
+        const genre = (pathParts.length >= 4 ? pathParts[1] : 'その他') || 'その他';
+        const pointStr = (pathParts.length >= 4 ? pathParts[2] : '0') || '0';
+        const pointValue = parseInt(pointStr.replace(/[^0-9]/g, '')) || 0;
+
         loadedImages.push({
           url: event.target.result,
           name: file.name.split('.').slice(0, -1).join('.'),
+          genre: genre,
+          pointValue: pointValue,
+          isPlayed: false,
           settings: { scale: 1, x: 0, y: 0 }
         });
         if (loadedImages.length === imageFiles.length) {

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Camera, Users, Grid, Scissors, Puzzle } from 'lucide-react';
+import { Camera, Users, Grid, Scissors, Puzzle, Layers } from 'lucide-react';
 import MessageBox from './MessageBox';
 
 export default function SetupScreen({
+  gameMode, setGameMode,
   playerCount, setPlayerCount,
   panelConfig, setPanelConfig,
   players, setPlayers,
@@ -19,6 +20,20 @@ export default function SetupScreen({
           <Camera className="w-8 h-8 text-indigo-500" />
           画像当てマスター
         </h1>
+
+        <div className="mb-8">
+          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest text-center mb-4">ゲームモード</p>
+          <div className="grid grid-cols-2 gap-4">
+            <button onClick={() => setGameMode('standard')} className={`py-4 rounded-2xl font-bold flex flex-col items-center gap-1 transition-all border-2 ${gameMode === 'standard' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:border-indigo-200'}`}>
+              <Grid className="w-5 h-5" />
+              <span className="text-sm">通常モード</span>
+            </button>
+            <button onClick={() => setGameMode('category')} className={`py-4 rounded-2xl font-bold flex flex-col items-center gap-1 transition-all border-2 ${gameMode === 'category' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:border-indigo-200'}`}>
+              <Layers className="w-5 h-5" />
+              <span className="text-sm">カテゴリーモード</span>
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div>

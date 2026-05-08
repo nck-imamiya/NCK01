@@ -4,6 +4,7 @@ import { shuffleArray } from './arrayUtils';
 
 export const useGameManager = (quizImages, setQuizImages) => {
   const [gameState, setGameState] = useState('setup');
+  const [gameMode, setGameMode] = useState('standard'); // 'standard' or 'category'
   const [playerCount, setPlayerCount] = useState(4);
   const [panelConfig, setPanelConfig] = useState(20);
   const [players, setPlayers] = useState([
@@ -63,10 +64,15 @@ export const useGameManager = (quizImages, setQuizImages) => {
     }
     setIsStageLoading(true);
     setPlayers(prev => prev.map(p => ({ ...p, score: 0 }))); // スコアをリセット
-    setGameState('playing');
-    setCurrentIdx(0);
     setCurrentPlayerIdx(0);
-    initPanels(panelConfig);
+
+    if (gameMode === 'category') {
+      setGameState('category_select');
+    } else {
+      setGameState('playing');
+      setCurrentIdx(0);
+      initPanels(panelConfig);
+    }
 
     // 最初はプレイヤー1をセットして表示
     setCutIn({ name: players[0].name, visible: true });
@@ -114,19 +120,38 @@ export const useGameManager = (quizImages, setQuizImages) => {
   const handleAnswer = (isCorrect) => {
     if (isTransitioning || isStageLoading) return;
     setIsTransitioning(true);
+    const currentImg = quizImages[currentIdx];
+
     if (isCorrect) {
-      const remainingCount = panels.filter(p => p.visible).length;
-      let points = remainingCount * basePoint;
-      if (isDoublePoints) points *= 2;
+      let points = 0;
+      if (gameMode === 'category') {
+        points = currentImg.pointValue;
+      } else {
+        const remainingCount = panels.filter(p => p.visible).length;
+        points = remainingCount * basePoint;
+        if (isDoublePoints) points *= 2;
+      }
+
       setPlayers(prev => prev.map((p, i) => i === currentPlayerIdx ? { ...p, score: p.score + points } : p));
       setFeedback({ type: 'correct', visible: true });
       setPanels(prev => prev.map(p => ({ ...p, visible: false }))); // 全パネルを非表示
       setTimeout(() => {
         setFeedback({ type: '', visible: false });
-        if (currentIdx + 1 < quizImages.length) {
-          nextTurn(true); // 次の問題へ
+        if (gameMode === 'category') {
+          const nextImages = quizImages.map((img, i) => i === currentIdx ? { ...img, isPlayed: true } : img);
+          setQuizImages(nextImages);
+          
+          // すべての問題が解かれたかチェック
+          if (nextImages.every(img => img.isPlayed)) {
+            setGameState('ended');
+          } else {
+            setGameState('category_select');
+          }
+          nextTurn(false);
+        } else if (currentIdx + 1 < quizImages.length) {
+          nextTurn(true);
         } else {
-          setGameState('ended'); // ゲーム終了
+          setGameState('ended');
         }
         setIsTransitioning(false);
       }, 3000);
@@ -134,10 +159,22 @@ export const useGameManager = (quizImages, setQuizImages) => {
       setFeedback({ type: 'incorrect', visible: true });
       setTimeout(() => {
         setFeedback({ type: '', visible: false });
+        if (gameMode === 'category') {
+          setGameState('category_select');
+        }
         nextTurn(false); // 次のプレイヤーへ
         setIsTransitioning(false);
       }, 1500);
     }
+  };
+
+  // カテゴリーモードでクイズを選択
+  const selectCategoryQuiz = (idx) => {
+    setIsStageLoading(true);
+    setCurrentIdx(idx);
+    initPanels(panelConfig);
+    setGameState('playing');
+    setTimeout(() => setIsStageLoading(false), 500);
   };
 
   // ターンを進める
@@ -174,6 +211,7 @@ export const useGameManager = (quizImages, setQuizImages) => {
 
   return {
     gameState, setGameState,
+    gameMode, setGameMode,
     playerCount, setPlayerCount,
     panelConfig, setPanelConfig,
     players, setPlayers,
@@ -193,5 +231,6 @@ export const useGameManager = (quizImages, setQuizImages) => {
     handleAnswer,
     nextTurn,
     getGridClass,
+    selectCategoryQuiz,
   };
 };

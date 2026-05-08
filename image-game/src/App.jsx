@@ -5,6 +5,7 @@ import SetupScreen from './SetupScreen';
 import EditingScreen from './EditingScreen';
 import PlayingScreen from './PlayingScreen';
 import ResultScreen from './ResultScreen';
+import CategorySelectScreen from './CategorySelectScreen';
 import MessageBox from './MessageBox';
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
   // ゲーム管理ロジックをカスタムフックから取得
   const {
     gameState, setGameState,
+    gameMode, setGameMode,
     playerCount, setPlayerCount,
     panelConfig, setPanelConfig,
     players, setPlayers,
@@ -27,6 +29,7 @@ export default function App() {
     startGame,
     handleAnswer,
     getGridClass,
+    selectCategoryQuiz,
   } = useGameManager(quizImages, setQuizImages);
 
   // 画像加工ロジックをカスタムフックから取得
@@ -41,6 +44,7 @@ export default function App() {
   if (gameState === 'setup') {
     return (
       <SetupScreen
+        gameMode={gameMode} setGameMode={setGameMode}
         playerCount={playerCount} setPlayerCount={setPlayerCount}
         panelConfig={panelConfig} setPanelConfig={setPanelConfig}
         players={players} setPlayers={setPlayers}
@@ -49,6 +53,18 @@ export default function App() {
         startGame={startGame}
         setGameState={setGameState}
         msg={msg}
+      />
+    );
+  }
+
+  if (gameState === 'category_select') {
+    return (
+      <CategorySelectScreen
+        quizImages={quizImages}
+        players={players}
+        currentPlayerIdx={currentPlayerIdx}
+        selectCategoryQuiz={selectCategoryQuiz}
+        setGameState={setGameState}
       />
     );
   }
@@ -82,6 +98,7 @@ export default function App() {
         feedback={feedback} cutIn={cutIn} msg={msg}
         setGameState={setGameState}
         panelConfig={panelConfig}
+        gameMode={gameMode}
       />
     );
   }

@@ -17,27 +17,34 @@ export default function PlayingScreen({
   feedback, cutIn, msg,
   setGameState,
   panelConfig,
+  gameMode,
 }) {
   const currentImg = quizImages[currentIdx];
   const visiblePanelsCount = panels.filter(p => p.visible).length;
-  const currentMaxPoints = visiblePanelsCount * basePoint * (isDoublePoints ? 2 : 1);
+  const currentMaxPoints = gameMode === 'category' 
+    ? currentImg.pointValue 
+    : visiblePanelsCount * basePoint * (isDoublePoints ? 2 : 1);
 
   // ダーツが刺さったパネルを管理する状態
   const [hitPanels, setHitPanels] = useState({});
+  const [isDartFlying, setIsDartFlying] = useState(false);
 
   // 問題が切り替わったらダーツの状態をリセット
   useEffect(() => {
     setHitPanels({});
+    setIsDartFlying(false);
   }, [currentIdx]);
 
   // パネルクリック時の演出用ハンドラ
   const handlePanelClick = (id) => {
-    if (hitPanels[id] || isStageLoading) return;
+    if (hitPanels[id] || isStageLoading || isDartFlying) return;
+    setIsDartFlying(true);
     setHitPanels(prev => ({ ...prev, [id]: true }));
     
     // ダーツが飛んで刺さる演出を待ってからパネルを開く（1秒後に実行）
     setTimeout(() => {
       removePanel(id);
+      setIsDartFlying(false);
     }, 1000);
   };
 
@@ -65,7 +72,9 @@ export default function PlayingScreen({
       <div className="relative z-10 w-full max-w-5xl flex flex-col items-center">
         <div className="text-white mb-8 text-center">
           <div className="inline-block px-4 py-1 bg-white/10 rounded-full text-[10px] font-black mb-3 backdrop-blur-sm border border-white/10 uppercase tracking-[0.3em] text-indigo-300">
-            第 {currentIdx + 1} 問 / 全 {quizImages.length} 問
+            {gameMode === 'category' 
+              ? `${currentImg.genre} / ${currentImg.pointValue}pts` 
+              : `第 {currentIdx + 1} 問 / 全 {quizImages.length} 問`}
           </div>
           <h2 className="text-5xl font-black tracking-tighter text-white drop-shadow-2xl italic">
             獲得可能: <span className="text-indigo-400 font-mono">{currentMaxPoints}</span> <span className="text-xl italic font-normal text-white/50">PTS</span>
@@ -203,7 +212,7 @@ export default function PlayingScreen({
       <FeedbackOverlay type={feedback.type} visible={feedback.visible} />
       <PlayerCutIn playerName={cutIn.name} visible={cutIn.visible} />
       <MessageBox message={msg.text} visible={msg.visible} />
-      <button onClick={() => setGameState('setup')} className="fixed bottom-6 right-6 p-4 bg-white/5 text-white/30 hover:bg-white/10 hover:text-white rounded-full transition-all border border-white/5"><RotateCcw className="w-6 h-6" /></button>
+      <button onClick={() => setGameState(gameMode === 'category' ? 'category_select' : 'setup')} className="fixed bottom-6 right-6 p-4 bg-white/5 text-white/30 hover:bg-white/10 hover:text-white rounded-full transition-all border border-white/5"><RotateCcw className="w-6 h-6" /></button>
     </div>
   );
 }
