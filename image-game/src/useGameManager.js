@@ -26,6 +26,8 @@ export const useGameManager = (quizImages, setQuizImages) => {
   const [msg, setMsg] = useState({ text: '', visible: false });
   const [scoringInfo, setScoringInfo] = useState(null); // { playerIdx, startScore, addedPoints }
   const [isTransitioning, setIsTransitioning] = useState(false); // 画面遷移中のフラグ
+  const [pendingJudge, setPendingJudge] = useState(null); // 'correct' or 'incorrect'
+  const [isJudging, setIsJudging] = useState(false);
   const [isCorrectAndWaiting, setIsCorrectAndWaiting] = useState(false); // 正解後の待機状態
 
   // パネル設定に基づいた基本ポイントをメモ化
@@ -130,7 +132,7 @@ export const useGameManager = (quizImages, setQuizImages) => {
 
   // パネルを非表示にする
   const removePanel = (id) => {
-    if (isTransitioning || isStageLoading) return;
+    if (isTransitioning || isStageLoading || isJudging) return;
     setPanels(prev => prev.map(p => p.id === id ? { ...p, visible: false } : p));
   };
 
@@ -151,17 +153,22 @@ export const useGameManager = (quizImages, setQuizImages) => {
       }
 
       const prevScore = players[currentPlayerIdx].score;
-      setScoringInfo({ playerIdx: currentPlayerIdx, startScore: prevScore, addedPoints: points });
       
       setFeedback({ type: 'correct', visible: true });
       setPanels(prev => prev.map(p => ({ ...p, visible: false }))); // 全パネルを非表示
 
+      // まず「正解！」を単独で表示し、その後にスコアカードを表示する
+      setTimeout(() => {
+        setFeedback({ type: '', visible: false });
+        setScoringInfo({ playerIdx: currentPlayerIdx, startScore: prevScore, addedPoints: points });
+      }, 1200);
+
       setTimeout(() => {
         setPlayers(prev => prev.map((p, i) => i === currentPlayerIdx ? { ...p, score: p.score + points } : p));
-        setFeedback({ type: '', visible: false });
         setScoringInfo(null);
         setIsCorrectAndWaiting(true); // 待機状態へ
-      }, 4000); // 演出時間を少し長めに確保
+        setIsTransitioning(false);
+      }, 4500); // 合計演出時間（1.2s + 3.3s）
     } else {
       setFeedback({ type: 'incorrect', visible: true });
       setTimeout(() => {
@@ -170,6 +177,19 @@ export const useGameManager = (quizImages, setQuizImages) => {
         setIsTransitioning(false);
       }, 1500);
     }
+  };
+
+  // ジャッジ開始演出
+  const startJudging = () => {
+    if (!pendingJudge || isJudging || isTransitioning || isStageLoading) return;
+    setIsJudging(true);
+    setIsTransitioning(true); // 演出中の操作防止
+    setTimeout(() => {
+      setIsJudging(false);
+      setIsTransitioning(false); // handleAnswer内部のガードを通すため一旦解除
+      handleAnswer(pendingJudge === 'correct');
+      setPendingJudge(null);
+    }, 2500); // 移動時間(0.5s) + 判定演出(2.0s)
   };
 
   // カテゴリーモードでクイズを選択
@@ -252,9 +272,12 @@ export const useGameManager = (quizImages, setQuizImages) => {
     msg, showAlert,
     scoringInfo, setScoringInfo,
     isTransitioning, setIsTransitioning,
+    pendingJudge, setPendingJudge,
+    isJudging, setIsJudging,
     isCorrectAndWaiting,
     basePoint,
     startGame,
+    startJudging,
     proceedToNext,
     startTestGame,
     initPanels,

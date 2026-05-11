@@ -6,6 +6,7 @@ import EditingScreen from './EditingScreen';
 import PlayingScreen from './PlayingScreen';
 import ResultScreen from './ResultScreen';
 import CategorySelectScreen from './CategorySelectScreen';
+import DesignTestScreen from './DesignTestScreen';
 import MessageBox from './MessageBox';
 
 export default function App() {
@@ -18,6 +19,8 @@ export default function App() {
     playerCount, setPlayerCount,
     panelConfig, setPanelConfig,
     players, setPlayers,
+    pendingJudge, setPendingJudge,
+    isJudging, startJudging,
     currentPlayerIdx,
     currentIdx,
     panels, removePanel,
@@ -96,6 +99,8 @@ export default function App() {
         handleAnswer={handleAnswer}
         basePoint={basePoint} getGridClass={getGridClass}
         isStageLoading={isStageLoading}
+        pendingJudge={pendingJudge} setPendingJudge={setPendingJudge}
+        isJudging={isJudging} startJudging={startJudging}
         tetrisLayout={tetrisLayout}
         feedback={feedback} cutIn={cutIn} msg={msg} scoringInfo={scoringInfo}
         isCorrectAndWaiting={isCorrectAndWaiting}
@@ -111,6 +116,14 @@ export default function App() {
     return (
       <ResultScreen
         players={players}
+        setGameState={setGameState}
+      />
+    );
+  }
+
+  if (gameState === 'design_test') {
+    return (
+      <DesignTestScreen
         setGameState={setGameState}
       />
     );
