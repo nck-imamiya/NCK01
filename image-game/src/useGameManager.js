@@ -16,7 +16,7 @@ export const useGameManager = (quizImages, setQuizImages) => {
   const [currentPlayerIdx, setCurrentPlayerIdx] = useState(0);
   const [currentIdx, setCurrentIdx] = useState(0); // 現在のクイズ画像のインデックス
   const [panels, setPanels] = useState([]); // パネルの状態
-  const [isDoublePoints, setIsDoublePoints] = useState(false); // ポイント2倍フラグ
+  // const [isDoublePoints, setIsDoublePoints] = useState(false); // ポイント2倍フラグ (一時停止)
   const [isStageLoading, setIsStageLoading] = useState(false); // ステージ切り替え中のローディング
   const [tetrisLayout, setTetrisLayout] = useState([]); // テトリスモードのレイアウト
 
@@ -24,7 +24,9 @@ export const useGameManager = (quizImages, setQuizImages) => {
   const [feedback, setFeedback] = useState({ type: '', visible: false });
   const [cutIn, setCutIn] = useState({ name: '', visible: false });
   const [msg, setMsg] = useState({ text: '', visible: false });
+  const [scoringInfo, setScoringInfo] = useState(null); // { playerIdx, startScore, addedPoints }
   const [isTransitioning, setIsTransitioning] = useState(false); // 画面遷移中のフラグ
+  const [isCorrectAndWaiting, setIsCorrectAndWaiting] = useState(false); // 正解後の待機状態
 
   // パネル設定に基づいた基本ポイントをメモ化
   const basePoint = useMemo(() => {
@@ -145,39 +147,25 @@ export const useGameManager = (quizImages, setQuizImages) => {
       } else {
         const remainingCount = panels.filter(p => p.visible).length;
         points = remainingCount * basePoint;
-        if (isDoublePoints) points *= 2;
+        // if (isDoublePoints) points *= 2;
       }
 
-      setPlayers(prev => prev.map((p, i) => i === currentPlayerIdx ? { ...p, score: p.score + points } : p));
+      const prevScore = players[currentPlayerIdx].score;
+      setScoringInfo({ playerIdx: currentPlayerIdx, startScore: prevScore, addedPoints: points });
+      
       setFeedback({ type: 'correct', visible: true });
       setPanels(prev => prev.map(p => ({ ...p, visible: false }))); // 全パネルを非表示
+
       setTimeout(() => {
+        setPlayers(prev => prev.map((p, i) => i === currentPlayerIdx ? { ...p, score: p.score + points } : p));
         setFeedback({ type: '', visible: false });
-        if (gameMode === 'category') {
-          const nextImages = quizImages.map((img, i) => i === currentIdx ? { ...img, isPlayed: true } : img);
-          setQuizImages(nextImages);
-          
-          // すべての問題が解かれたかチェック
-          if (nextImages.every(img => img.isPlayed)) {
-            setGameState('ended');
-          } else {
-            setGameState('category_select');
-          }
-          nextTurn(false);
-        } else if (currentIdx + 1 < quizImages.length) {
-          nextTurn(true);
-        } else {
-          setGameState('ended');
-        }
-        setIsTransitioning(false);
-      }, 3000);
+        setScoringInfo(null);
+        setIsCorrectAndWaiting(true); // 待機状態へ
+      }, 4000); // 演出時間を少し長めに確保
     } else {
       setFeedback({ type: 'incorrect', visible: true });
       setTimeout(() => {
         setFeedback({ type: '', visible: false });
-        if (gameMode === 'category') {
-          setGameState('category_select');
-        }
         nextTurn(false); // 次のプレイヤーへ
         setIsTransitioning(false);
       }, 1500);
@@ -193,6 +181,28 @@ export const useGameManager = (quizImages, setQuizImages) => {
     setTimeout(() => setIsStageLoading(false), 500);
   };
 
+  // 正解待機状態から次へ進む処理
+  const proceedToNext = () => {
+    setIsCorrectAndWaiting(false);
+    
+    if (gameMode === 'category') {
+      const nextImages = quizImages.map((img, i) => i === currentIdx ? { ...img, isPlayed: true } : img);
+      setQuizImages(nextImages);
+      
+      if (nextImages.every(img => img.isPlayed)) {
+        setGameState('ended');
+      } else {
+        setGameState('category_select');
+      }
+      nextTurn(false);
+    } else if (currentIdx + 1 < quizImages.length) {
+      nextTurn(true);
+    } else {
+      setGameState('ended');
+    }
+    setIsTransitioning(false);
+  };
+
   // ターンを進める
   const nextTurn = (isNextQuestion) => {
     const nextPlayerIdx = (currentPlayerIdx + 1) % players.length;
@@ -200,7 +210,7 @@ export const useGameManager = (quizImages, setQuizImages) => {
       setIsStageLoading(true);
       setCurrentIdx(prev => prev + 1);
       initPanels(panelConfig);
-      setIsDoublePoints(false);
+      // setIsDoublePoints(false);
     }
 
     // 次のプレイヤー名を明示的に指定してカットインを表示
@@ -234,15 +244,18 @@ export const useGameManager = (quizImages, setQuizImages) => {
     currentPlayerIdx, setCurrentPlayerIdx,
     currentIdx, setCurrentIdx,
     panels, setPanels, removePanel,
-    isDoublePoints, setIsDoublePoints,
+    // isDoublePoints, setIsDoublePoints,
     isStageLoading, setIsStageLoading,
     tetrisLayout, setTetrisLayout,
     feedback, setFeedback,
     cutIn, setCutIn,
     msg, showAlert,
+    scoringInfo, setScoringInfo,
     isTransitioning, setIsTransitioning,
+    isCorrectAndWaiting,
     basePoint,
     startGame,
+    proceedToNext,
     startTestGame,
     initPanels,
     handleAnswer,

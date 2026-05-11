@@ -21,11 +21,12 @@ export default function App() {
     currentPlayerIdx,
     currentIdx,
     panels, removePanel,
-    isDoublePoints, setIsDoublePoints,
     isStageLoading,
+    isCorrectAndWaiting,
     tetrisLayout,
-    feedback, cutIn, msg, showAlert,
+    feedback, cutIn, msg, showAlert, scoringInfo,
     basePoint,
+    proceedToNext,
     startGame,
     startTestGame,
     handleAnswer,
@@ -92,13 +93,14 @@ export default function App() {
         quizImages={quizImages} currentIdx={currentIdx}
         players={players} currentPlayerIdx={currentPlayerIdx}
         panels={panels} removePanel={removePanel}
-        isDoublePoints={isDoublePoints} setIsDoublePoints={setIsDoublePoints}
         handleAnswer={handleAnswer}
         basePoint={basePoint} getGridClass={getGridClass}
         isStageLoading={isStageLoading}
         tetrisLayout={tetrisLayout}
-        feedback={feedback} cutIn={cutIn} msg={msg}
+        feedback={feedback} cutIn={cutIn} msg={msg} scoringInfo={scoringInfo}
+        isCorrectAndWaiting={isCorrectAndWaiting}
         setGameState={setGameState}
+        proceedToNext={proceedToNext}
         panelConfig={panelConfig}
         gameMode={gameMode}
       />

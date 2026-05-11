@@ -1,20 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, RotateCcw } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { CheckCircle, XCircle, RotateCcw, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import FeedbackOverlay from './FeedbackOverlay';
 import PlayerCutIn from './PlayerCutIn';
 import MessageBox from './MessageBox';
+
+// スコアがドゥルドゥル増えるコンポーネント
+const RollingNumber = ({ from, added }) => {
+  const [displayValue, setDisplayValue] = useState(from);
+  const [isRolling, setIsRolling] = useState(false);
+
+  useEffect(() => {
+    setIsRolling(true);
+    const duration = 1500; // 1.5秒かけて増やす
+    const steps = 30;
+    const increment = added / steps;
+    let currentStep = 0;
+    const timer = setInterval(() => {
+      currentStep++;
+      if (currentStep >= steps) {
+        setDisplayValue(from + added);
+        setIsRolling(false);
+        clearInterval(timer);
+      } else {
+        setDisplayValue(Math.floor(from + increment * currentStep));
+      }
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [from, added]);
+
+  return (
+    <motion.span
+      className="inline-block"
+      animate={isRolling ? {
+        x: [0, -2, 2, -2, 2, 0],
+        y: [0, 1, -1, 1, -1, 0],
+      } : { x: 0, y: 0 }}
+      transition={isRolling ? { duration: 0.1, repeat: Infinity } : { duration: 0.2 }}
+    >
+      {displayValue}
+    </motion.span>
+  );
+};
 
 export default function PlayingScreen({
   quizImages, currentIdx,
   players, currentPlayerIdx,
   panels, removePanel,
-  isDoublePoints, setIsDoublePoints,
   handleAnswer,
   basePoint, getGridClass,
   isStageLoading,
+  isCorrectAndWaiting,
   tetrisLayout,
-  feedback, cutIn, msg,
+  feedback, cutIn, msg, scoringInfo,
+  proceedToNext,
   setGameState,
   panelConfig,
   gameMode,
@@ -23,7 +62,7 @@ export default function PlayingScreen({
   const visiblePanelsCount = panels.filter(p => p.visible).length;
   const currentMaxPoints = gameMode === 'category' 
     ? currentImg.pointValue 
-    : visiblePanelsCount * basePoint * (isDoublePoints ? 2 : 1);
+    : visiblePanelsCount * basePoint;
 
   // ダーツが刺さったパネルを管理する状態
   const [hitPanels, setHitPanels] = useState({});
@@ -58,16 +97,77 @@ export default function PlayingScreen({
 
       {/* プレイヤースコアリスト */}
       <div className="fixed top-6 left-6 flex flex-col gap-3 z-30">
-        {players.map((p, i) => (
-          <div key={p.id} className={`flex items-center gap-4 px-5 py-3 rounded-[1.5rem] border-2 transition-all duration-300 ${i === currentPlayerIdx ? 'bg-indigo-600 border-white shadow-[0_0_30px_rgba(79,70,229,0.5)] scale-110 z-10' : 'bg-white/5 border-white/10 opacity-40'}`}>
-            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center font-bold text-white text-[10px]">{i + 1}</div>
-            <div>
-              <p className="text-white text-[10px] font-black uppercase tracking-widest opacity-70 leading-none mb-1">{p.name}</p>
-              <p className="text-white text-xl font-black leading-none">{p.score}<span className="text-[10px] ml-1 opacity-50 font-normal">pts</span></p>
-            </div>
-          </div>
-        ))}
+        {players.map((p, i) => {
+          const isScoring = scoringInfo && scoringInfo.playerIdx === i;
+          return (
+            <motion.div 
+              layoutId={`player-card-${p.id}`}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              key={p.id} 
+              className={`flex items-center gap-4 px-5 py-3 rounded-[1.5rem] border-2 ${i === currentPlayerIdx ? 'bg-indigo-600 border-white shadow-[0_0_30px_rgba(79,70,229,0.5)] scale-110 z-10' : 'bg-white/5 border-white/10 opacity-40'} ${isScoring ? 'invisible' : ''}`}
+            >
+              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center font-bold text-white text-[10px]">{i + 1}</div>
+              <div>
+                <p className="text-white text-[10px] font-black uppercase tracking-widest opacity-70 leading-none mb-1">{p.name}</p>
+                <p className="text-white text-xl font-black leading-none">{p.score}<span className="text-[10px] ml-1 opacity-50 font-normal">pts</span></p>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
+
+      {/* スコア加算アニメーション・オーバーレイ */}
+      <AnimatePresence>
+        {scoringInfo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center"
+          >
+            <motion.div
+              layoutId={`player-card-${players[scoringInfo.playerIdx].id}`}
+              className="bg-indigo-600 border-4 border-white p-12 rounded-[4rem] shadow-[0_0_100px_rgba(79,70,229,0.8)] flex flex-col items-center gap-6"
+              initial={{ scale: 1 }}
+              animate={{ scale: 1.5 }}
+              exit={{ scale: 1, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              {/* 正解メッセージの統合 */}
+              <div className="flex flex-col items-center mb-2">
+                <motion.div
+                  initial={{ rotate: -20, scale: 0 }}
+                  animate={{ rotate: 0, scale: 1 }}
+                  transition={{ delay: 0.2, type: 'spring' }}
+                  className="bg-emerald-500 p-3 rounded-full mb-2 shadow-[0_0_30px_rgba(16,185,129,0.6)]"
+                >
+                  <CheckCircle className="w-10 h-10 text-white" />
+                </motion.div>
+                <h2 className="text-emerald-400 text-5xl font-black italic tracking-widest drop-shadow-md">正解！</h2>
+              </div>
+
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-black text-white text-xs">{scoringInfo.playerIdx + 1}</span>
+                  <p className="text-white text-sm font-black uppercase tracking-[0.4em] opacity-80">{players[scoringInfo.playerIdx].name}</p>
+                </div>
+                <div className="text-white text-8xl font-black italic tracking-tighter leading-none mb-4">
+                  <RollingNumber from={scoringInfo.startScore} added={scoringInfo.addedPoints} />
+                  <span className="text-2xl ml-4 opacity-50 not-italic">pts</span>
+                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-yellow-400 text-3xl font-black"
+                >
+                  +{scoringInfo.addedPoints} !!
+                </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="relative z-10 w-full max-w-5xl flex flex-col items-center">
         <div className="text-white mb-8 text-center">
@@ -83,10 +183,10 @@ export default function PlayingScreen({
 
         <div className="w-full flex items-center justify-center p-4 min-h-[50vh]">
           {currentImg && (
-            <div className={`relative w-full max-w-4xl aspect-video rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.9)] border-[12px] border-white/5 bg-black overflow-hidden group transition-all duration-500 ${isStageLoading ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}>
+            <div className={`relative w-full max-w-4xl aspect-video rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.9)] border-[12px] border-white/5 bg-black group transition-all duration-500 ${isStageLoading ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}>
               {!isStageLoading && (
                 <>
-                  <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-full h-full flex items-center justify-center rounded-[2.2rem] overflow-hidden">
                     <img src={currentImg.url} className="w-full h-full object-contain" style={{ transform: `scale(${currentImg.settings.scale}) translate(${currentImg.settings.x}%, ${currentImg.settings.y}%)` }} alt="Quiz" />
                   </div>
                   
@@ -139,8 +239,8 @@ export default function PlayingScreen({
                                 {hitPanels[pieceId] && cellIndexInPiece === 0 && (
                                   <motion.img
                                     src="/dart.png"
-                                    initial={{ x: 200, y: -200, opacity: 0, scale: 1.5, rotate: -15 }}
-                                    animate={{ x: 0, y: 0, opacity: 1, scale: 0.8, rotate: -15 }}
+                                    initial={{ x: 220, y: -230, opacity: 0, scale: 1.5, rotate: -15 }}
+                                    animate={{ x: 20, y: -30, opacity: 1, scale: 0.8, rotate: -15 }}
                                     transition={{ type: 'spring', stiffness: 200, damping: 25, duration: 0.8 }}
                                     className="absolute z-50 w-24 h-24 pointer-events-none"
                                     style={{ filter: 'drop-shadow(4px 8px 12px rgba(0,0,0,0.7))' }}
@@ -155,7 +255,7 @@ export default function PlayingScreen({
                         <div
                           key={p.id}
                           onClick={() => handlePanelClick(p.id)}
-                          className={`relative flex items-center justify-center cursor-pointer transition-all duration-500 transform overflow-hidden
+                          className={`relative flex items-center justify-center cursor-pointer transition-all duration-500 transform
                             ${p.visible ? `${p.color} opacity-100` : 'opacity-0 pointer-events-none scale-90 blur-xl'}
                             border border-black/20
                           `}
@@ -173,8 +273,8 @@ export default function PlayingScreen({
                             {hitPanels[p.id] && (
                               <motion.img
                                 src="/dart.png"
-                                initial={{ x: 200, y: -200, opacity: 0, scale: 2, rotate: -15 }}
-                                animate={{ x: 0, y: 0, opacity: 1, scale: 1, rotate: -15 }}
+                                initial={{ x: 230, y: -240, opacity: 0, scale: 2, rotate: -15 }}
+                                animate={{ x: 30, y: -40, opacity: 1, scale: 1, rotate: -15 }}
                                 transition={{ type: 'spring', stiffness: 150, damping: 20, duration: 0.8 }}
                                 className="absolute z-50 w-28 h-28 pointer-events-none"
                                 style={{ filter: 'drop-shadow(6px 12px 16px rgba(0,0,0,0.8))' }}
@@ -191,28 +291,40 @@ export default function PlayingScreen({
         </div>
 
         <div className="mt-12 flex items-center gap-12">
-          <button onClick={() => handleAnswer(true)} className="group flex flex-col items-center gap-3 transition-transform active:scale-90">
-            <div className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.4)] group-hover:scale-110 transition-all">
-              <CheckCircle className="w-12 h-12 text-white" />
-            </div>
-            <span className="text-emerald-400 font-black text-xs uppercase tracking-[0.2em]">正解</span>
-          </button>
-          <button onClick={() => setIsDoublePoints(prev => !prev)} disabled={isDoublePoints || isStageLoading} className={`px-12 py-6 rounded-[2rem] font-black transition-all shadow-xl active:scale-95 text-xl tracking-tighter ${isDoublePoints ? 'bg-orange-500 text-white animate-pulse shadow-orange-500/50' : 'bg-white text-indigo-950 hover:bg-indigo-50 hover:scale-105'}`}>
-            {isDoublePoints ? '2倍ブースト中' : 'ポイント2倍！！'}
-          </button>
-          <button onClick={() => handleAnswer(false)} className="group flex flex-col items-center gap-3 transition-transform active:scale-90">
-            <div className="w-24 h-24 rounded-full bg-rose-500 flex items-center justify-center shadow-[0_0_40px_rgba(244,63,94,0.4)] group-hover:scale-110 transition-all">
-              <XCircle className="w-12 h-12 text-white" />
-            </div>
-            <span className="text-rose-400 font-black text-xs uppercase tracking-[0.2em]">不正解</span>
-          </button>
+          {!isCorrectAndWaiting ? (
+            <>
+              <button onClick={() => handleAnswer(true)} className="group flex flex-col items-center gap-3 transition-transform active:scale-90">
+                <div className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.4)] group-hover:scale-110 transition-all">
+                  <CheckCircle className="w-12 h-12 text-white" />
+                </div>
+                <span className="text-emerald-400 font-black text-xs uppercase tracking-[0.2em]">正解</span>
+              </button>
+              <button onClick={() => handleAnswer(false)} className="group flex flex-col items-center gap-3 transition-transform active:scale-90">
+                <div className="w-24 h-24 rounded-full bg-rose-500 flex items-center justify-center shadow-[0_0_40px_rgba(244,63,94,0.4)] group-hover:scale-110 transition-all">
+                  <XCircle className="w-12 h-12 text-white" />
+                </div>
+                <span className="text-rose-400 font-black text-xs uppercase tracking-[0.2em]">不正解</span>
+              </button>
+            </>
+          ) : (
+            <motion.button 
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={proceedToNext} 
+              className="group relative px-20 py-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[2rem] font-black text-2xl shadow-[0_20px_50px_rgba(79,70,229,0.4)] transition-all active:scale-95 flex items-center gap-4 italic tracking-tighter"
+            >
+              次へ進む
+              <ChevronRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
+            </motion.button>
+          )}
         </div>
       </div>
 
-      <FeedbackOverlay type={feedback.type} visible={feedback.visible} />
+      {/* 正解時はスコアカード側で表示するため、不正解時のみ FeedbackOverlay を表示 */}
+      <FeedbackOverlay type={feedback.type} visible={feedback.visible && feedback.type === 'incorrect'} />
       <PlayerCutIn playerName={cutIn.name} visible={cutIn.visible} />
       <MessageBox message={msg.text} visible={msg.visible} />
-      <button onClick={() => setGameState(gameMode === 'category' ? 'category_select' : 'setup')} className="fixed bottom-6 right-6 p-4 bg-white/5 text-white/30 hover:bg-white/10 hover:text-white rounded-full transition-all border border-white/5"><RotateCcw className="w-6 h-6" /></button>
+      <button onClick={() => setGameState('setup')} className="fixed bottom-6 right-6 p-4 bg-white/5 text-white/30 hover:bg-white/10 hover:text-white rounded-full transition-all border border-white/5"><RotateCcw className="w-6 h-6" /></button>
     </div>
   );
 }

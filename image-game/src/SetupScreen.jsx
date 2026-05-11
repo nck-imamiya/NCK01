@@ -1,5 +1,5 @@
-import React from 'react';
-import { Camera, Users, Grid, Scissors, Puzzle, Layers, FlaskConical } from 'lucide-react';
+import React, { useState } from 'react';
+import { Camera, Users, Grid, Scissors, Puzzle, Layers, FlaskConical, ImageIcon, ImageOff } from 'lucide-react';
 import MessageBox from './MessageBox';
 
 export default function SetupScreen({
@@ -14,15 +14,33 @@ export default function SetupScreen({
   setGameState,
   msg,
 }) {
+  const [showBackground, setShowBackground] = useState(true);
+
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-12 lg:p-20 overflow-y-auto">
+    <div className={`min-h-screen p-6 md:p-12 lg:p-20 overflow-y-auto relative transition-colors duration-700 ${!showBackground ? 'bg-slate-50' : ''}`}>
+      {/* 背景画像レイヤー */}
+      {showBackground && (
+        <div 
+          className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat animate-in fade-in duration-1000"
+          style={{ backgroundImage: "url('/background.png')" }}
+        />
+      )}
+
+      {/* 背景切り替えボタン（控えめなデザイン） */}
+      <button 
+        onClick={() => setShowBackground(!showBackground)}
+        className="fixed top-6 right-6 z-50 p-2 rounded-xl bg-white/10 hover:bg-white/30 text-indigo-900/20 hover:text-indigo-900/50 transition-all backdrop-blur-sm border border-white/10"
+        title={showBackground ? "背景画像を隠す" : "背景画像を表示"}
+      >
+        {showBackground ? <ImageOff className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
+      </button>
+
       <div className="max-w-6xl mx-auto">
         <header className="mb-16">
           <h1 className="text-5xl font-black text-indigo-900 flex items-center gap-4 italic mb-2 tracking-tighter">
             <Camera className="w-12 h-12 text-indigo-500" />
-          画像当てマスター
-        </h1>
-          <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">Game Preparation & Configuration</p>
+            画像当てマスター
+          </h1>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
