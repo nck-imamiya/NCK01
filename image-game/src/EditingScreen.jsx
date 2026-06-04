@@ -30,12 +30,15 @@ export default function EditingScreen({
           準備完了
         </button>
       </div>
-      <div className="flex-1 flex flex-col lg:flex-row p-6 gap-8 items-start justify-center overflow-y-auto">
-        <div className="w-full lg:w-2/3 flex flex-col items-center">
+      <div className="flex-1 flex flex-col lg:flex-row p-6 gap-8 items-center justify-center overflow-y-auto">
+        <div className="w-full lg:w-3/4 flex flex-col items-center">
            <div className="w-full bg-slate-200 p-2 rounded-[2.5rem] shadow-inner">
-             <div className="relative w-full aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white">
-                <div className="w-full h-full flex items-center justify-center bg-black">
-                  <img src={currentEdit.url} className="w-full h-full object-contain" style={{ transform: `scale(${currentEdit.settings.scale}) translate(${currentEdit.settings.x}%, ${currentEdit.settings.y}%)`, transition: 'transform 0.1s ease-out' }} alt="edit" />
+             <div className={`relative mx-auto bg-black rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white transition-all duration-300 ${
+               currentEdit.settings.isPortrait ? 'h-[85vh] aspect-[9/16]' : 'w-full aspect-video'
+             }`}>
+                <div className="w-full h-full flex items-center justify-center">
+                  <img src={currentEdit.url} className="w-full h-full object-cover" 
+                       style={{ transform: `scale(${currentEdit.settings.scale}) translate(${currentEdit.settings.x}%, ${currentEdit.settings.y}%)`, transition: 'transform 0.1s ease-out' }} alt="edit" />
                 </div>
                 <div className="absolute inset-0 pointer-events-none border-[12px] border-black/10 ring-1 ring-inset ring-white/20"></div>
              </div>

@@ -18,23 +18,26 @@ export const useImageProcessor = (quizImages, setQuizImages, showAlert) => {
     imageFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const pathParts = file.webkitRelativePath.split('/');
-        // ルート/ジャンル/点数/ファイル名 の構造を想定
-        const genre = (pathParts.length >= 4 ? pathParts[1] : 'その他') || 'その他';
-        const pointStr = (pathParts.length >= 4 ? pathParts[2] : '0') || '0';
-        const pointValue = parseInt(pointStr.replace(/[^0-9]/g, '')) || 0;
+        const img = new Image();
+        img.onload = () => {
+          const pathParts = file.webkitRelativePath.split('/');
+          const genre = (pathParts.length >= 4 ? pathParts[1] : 'その他') || 'その他';
+          const pointStr = (pathParts.length >= 4 ? pathParts[2] : '0') || '0';
+          const pointValue = parseInt(pointStr.replace(/[^0-9]/g, '')) || 0;
 
-        loadedImages.push({
-          url: event.target.result,
-          name: file.name.split('.').slice(0, -1).join('.'),
-          genre: genre,
-          pointValue: pointValue,
-          isPlayed: false,
-          settings: { scale: 1, x: 0, y: 0 }
-        });
-        if (loadedImages.length === imageFiles.length) {
-          setQuizImages(shuffleArray([...loadedImages]));
-        }
+          loadedImages.push({
+            url: event.target.result,
+            name: file.name.split('.').slice(0, -1).join('.'),
+            genre: genre,
+            pointValue: pointValue,
+            isPlayed: false,
+            settings: { scale: 1, x: 0, y: 0, isPortrait: img.height > img.width }
+          });
+          if (loadedImages.length === imageFiles.length) {
+            setQuizImages(shuffleArray([...loadedImages]));
+          }
+        };
+        img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     });
@@ -56,14 +59,19 @@ export const useImageProcessor = (quizImages, setQuizImages, showAlert) => {
     const img = new Image();
     img.src = currentEdit.url;
     img.onload = () => {
-      canvas.width = 1280; canvas.height = 720; // 固定サイズでエクスポート
+      const isPortrait = currentEdit.settings.isPortrait;
+      canvas.width = isPortrait ? 720 : 1280;
+      canvas.height = isPortrait ? 1280 : 720;
+
       ctx.fillStyle = "black"; ctx.fillRect(0, 0, canvas.width, canvas.height);
       const { scale, x, y } = currentEdit.settings;
       const imgRatio = img.width / img.height;
       const canvasRatio = canvas.width / canvas.height;
+
       let baseW, baseH;
-      if (imgRatio > canvasRatio) { baseW = canvas.width; baseH = canvas.width / imgRatio; }
-      else { baseH = canvas.height; baseW = canvas.height * imgRatio; }
+      if (imgRatio > canvasRatio) { baseH = canvas.height; baseW = canvas.height * imgRatio; }
+      else { baseW = canvas.width; baseH = canvas.width / imgRatio; }
+
       const scaledW = baseW * scale; const scaledH = baseH * scale;
       const moveX = scaledW * (x / 100); const moveY = scaledH * (y / 100);
       const drawX = (canvas.width - scaledW) / 2 + moveX; const drawY = (canvas.height - scaledH) / 2 + moveY;

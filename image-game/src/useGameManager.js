@@ -244,14 +244,14 @@ export const useGameManager = (quizImages, setQuizImages) => {
   };
 
   // パネルのグリッドクラスを返す
-  const getGridClass = () => {
-    if (panelConfig === 'tetris') return 'grid-cols-8 grid-rows-5';
+  const getGridClass = (isPortrait = false) => {
+    if (panelConfig === 'tetris') return isPortrait ? 'grid-cols-5 grid-rows-8' : 'grid-cols-8 grid-rows-5';
     switch (panelConfig) {
       case 4: return 'grid-cols-2 grid-rows-2';
-      case 8: return 'grid-cols-4 grid-rows-2';
-      case 10: return 'grid-cols-5 grid-rows-2';
+      case 8: return isPortrait ? 'grid-cols-2 grid-rows-4' : 'grid-cols-4 grid-rows-2';
+      case 10: return isPortrait ? 'grid-cols-2 grid-rows-5' : 'grid-cols-5 grid-rows-2';
       case 16: return 'grid-cols-4 grid-rows-4';
-      default: return 'grid-cols-5 grid-rows-4';
+      default: return isPortrait ? 'grid-cols-4 grid-rows-5' : 'grid-cols-5 grid-rows-4'; // 20
     }
   };
 

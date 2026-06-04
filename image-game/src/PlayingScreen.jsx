@@ -70,18 +70,36 @@ const RollingNumber = ({ from, added, delay = 0 }) => {
 
 // パネルグリッド部分を独立させてメモ化（パフォーマンス向上の肝）
 const QuizBoard = memo(({ 
-  currentImg, isStageLoading, getGridClass, panelConfig, tetrisLayout, panels, handlePanelClick, hitPanels 
+  currentImg, isStageLoading, getGridClass, panelConfig, tetrisLayout, panels, handlePanelClick, hitPanels, isPortrait
 }) => {
   if (!currentImg) return null;
+
+  // テトリスモードの場合、縦長ならレイアウトを行列転置する
+  const effectiveLayout = (isPortrait && panelConfig === 'tetris' && tetrisLayout.length > 0)
+    ? tetrisLayout[0].map((_, colIdx) => tetrisLayout.map(row => row[colIdx]))
+    : tetrisLayout;
+
+  const boardClass = isPortrait 
+    ? "h-[85vh] aspect-[9/16] rounded-[2rem]"
+    : "max-w-6xl aspect-video rounded-[3rem]";
   
   return (
-    <div className={`relative w-full max-w-4xl aspect-video rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.9)] border-[12px] border-white/5 bg-black group transition-all duration-500 ${isStageLoading ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}>
+    <div className={`relative ${isPortrait ? '' : 'w-full'} ${boardClass} shadow-[0_50px_100px_rgba(0,0,0,0.9)] border-[12px] border-white/5 bg-black group transition-all duration-500 ${isStageLoading ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}>
       {!isStageLoading && (
         <>
-          <div className="w-full h-full flex items-center justify-center rounded-[2.2rem] overflow-hidden">
+          <div className={`w-full h-full flex items-center justify-center overflow-hidden ${isPortrait ? 'rounded-[1.2rem]' : 'rounded-[2.2rem]'}`}>
+            {/* 背景のぼかし (縦長時に左右の隙間を埋める) */}
+            {isPortrait && (
+              <img 
+                src={currentImg.url} 
+                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" 
+                aria-hidden="true"
+              />
+            )}
+            
             <img 
               src={currentImg.url} 
-              className="w-full h-full object-contain" 
+              className="relative z-10 w-full h-full object-cover" 
               style={{ 
                 transform: `scale(${currentImg.settings.scale}) translate(${currentImg.settings.x}%, ${currentImg.settings.y}%)`,
                 willChange: 'transform'
@@ -90,21 +108,21 @@ const QuizBoard = memo(({
             />
           </div>
           
-          <div className={`absolute inset-0 grid ${getGridClass()} gap-0`}>
+          <div className={`absolute inset-0 grid ${getGridClass(isPortrait)} gap-0 z-20`}>
             {panelConfig === 'tetris' ? (
-              tetrisLayout.flatMap((row, rIdx) => 
+              effectiveLayout.flatMap((row, rIdx) => 
                 row.map((pieceId, cIdx) => {
                   const piece = panels.find(p => p.id === pieceId);
                   if (!piece) return null;
                   
                   const pieceCells = [];
-                  tetrisLayout.forEach((r, ri) => r.forEach((p, ci) => { if(p === pieceId) pieceCells.push({ri, ci}); }));
+                  effectiveLayout.forEach((r, ri) => r.forEach((p, ci) => { if(p === pieceId) pieceCells.push({ri, ci}); }));
                   const cellIndexInPiece = pieceCells.findIndex(c => c.ri === rIdx && c.ci === cIdx);
 
-                  const hasTop = rIdx > 0 && tetrisLayout[rIdx-1][cIdx] === pieceId;
-                  const hasBottom = rIdx < 4 && tetrisLayout[rIdx+1][cIdx] === pieceId;
-                  const hasLeft = cIdx > 0 && tetrisLayout[rIdx][cIdx-1] === pieceId;
-                  const hasRight = cIdx < 7 && tetrisLayout[rIdx][cIdx+1] === pieceId;
+                  const hasTop = rIdx > 0 && effectiveLayout[rIdx-1][cIdx] === pieceId;
+                  const hasBottom = rIdx < (isPortrait ? 7 : 4) && effectiveLayout[rIdx+1][cIdx] === pieceId;
+                  const hasLeft = cIdx > 0 && effectiveLayout[rIdx][cIdx-1] === pieceId;
+                  const hasRight = cIdx < (isPortrait ? 4 : 7) && effectiveLayout[rIdx][cIdx+1] === pieceId;
 
                   const assignedNum = cellIndexInPiece === 0 ? piece.assignedNumbers[0] 
                                   : cellIndexInPiece === 2 ? piece.assignedNumbers[1] 
@@ -229,12 +247,23 @@ export default function PlayingScreen({
   // ダーツが刺さったパネルを管理する状態
   const [hitPanels, setHitPanels] = useState({});
   const [isDartFlying, setIsDartFlying] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(false);
 
   // 問題が切り替わったらダーツの状態をリセット
   useEffect(() => {
     setHitPanels({});
     setIsDartFlying(false);
   }, [currentIdx]);
+
+  // 画像の向きを判定
+  useEffect(() => {
+    if (!currentImg) return;
+    const img = new Image();
+    img.src = currentImg.url;
+    img.onload = () => {
+      setIsPortrait(img.height > img.width);
+    };
+  }, [currentImg]);
 
   // ジャッジ開始時のダーツ制御
   // キーボードイベントの登録 (Aキー: 正解, Dキー: 不正解)
@@ -335,7 +364,7 @@ export default function PlayingScreen({
         )}
       </AnimatePresence>
 
-      <div className="relative z-10 w-full max-w-5xl flex flex-col items-center">
+      <div className={`relative z-10 w-full ${isPortrait ? 'max-w-7xl' : 'max-w-5xl'} flex flex-col items-center transition-all duration-500`}>
         <div className="text-white mb-8 text-center">
           {gameMode === 'category' && (
             <div className="inline-block px-4 py-1 bg-white/10 rounded-full text-[10px] font-black mb-3 backdrop-blur-sm border border-white/10 uppercase tracking-[0.3em] text-indigo-300">
@@ -347,20 +376,23 @@ export default function PlayingScreen({
           </h2>
         </div>
 
-        <div className="w-full flex items-center justify-center p-4 min-h-[50vh]">
-          <QuizBoard 
-            currentImg={currentImg}
-            isStageLoading={isStageLoading}
-            getGridClass={getGridClass}
-            panelConfig={panelConfig}
-            tetrisLayout={tetrisLayout}
-            panels={panels}
-            handlePanelClick={handlePanelClick}
-            hitPanels={hitPanels}
-          />
-        </div>
+        <div className={`w-full ${isPortrait ? 'grid grid-cols-[1fr_auto_1fr] items-center' : 'flex flex-col items-center'}`}>
+          {isPortrait && <div />} {/* 左側のスペーサー（中央寄せ用） */}
+          <div className="flex items-center justify-center p-4">
+            <QuizBoard 
+              currentImg={currentImg}
+              isStageLoading={isStageLoading}
+              getGridClass={getGridClass}
+              panelConfig={panelConfig}
+              tetrisLayout={tetrisLayout}
+              panels={panels}
+              handlePanelClick={handlePanelClick}
+              hitPanels={hitPanels}
+              isPortrait={isPortrait}
+            />
+          </div>
 
-        <div className="mt-12 flex items-center gap-12 relative">
+          <div className={`${isPortrait ? 'mt-0 pl-12' : 'mt-12'} flex items-center gap-12 relative`}>
           {!isCorrectAndWaiting ? (
             <div className="flex flex-col items-center gap-4 relative">
               {/* ジャッジ判明時のバーストエフェクト */}
@@ -390,7 +422,8 @@ export default function PlayingScreen({
                 initial={pendingJudge ? { scale: 0.9, opacity: 0.8 } : {}}
                 animate={{
                   scale: feedback.visible ? 2.5 : (isJudging ? 1.4 : (pendingJudge ? 1 : 1)),
-                  y: (isJudging || feedback.visible) ? -300 : 0,
+                  x: (isJudging || feedback.visible) && isPortrait ? -450 : 0,
+                  y: (isJudging || feedback.visible) && !isPortrait ? -300 : 0,
                   opacity: (feedback.visible || (isStageLoading && !isJudging)) ? 0 : (pendingJudge ? 1 : 0.8),
                   boxShadow: isJudging ? "0 0 80px rgba(99,102,241,0.8)" : (pendingJudge ? "0 0 40px rgba(99,102,241,0.5)" : "none"),
                   zIndex: (isJudging || feedback.visible) ? 150 : 10
@@ -443,6 +476,7 @@ export default function PlayingScreen({
               <ChevronRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
             </motion.button>
           )}
+          </div>
         </div>
       </div>
 
