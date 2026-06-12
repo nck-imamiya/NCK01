@@ -82,6 +82,9 @@ export default function App() {
         editIdx={editIdx} setEditIdx={setEditIdx}
         updateImageSetting={updateImageSetting}
         downloadImage={downloadImage}
+        panelConfig={panelConfig}
+        getGridClass={getGridClass}
+        tetrisLayout={tetrisLayout}
         exportCanvasRef={exportCanvasRef}
         setGameState={setGameState}
         startGame={startGame}

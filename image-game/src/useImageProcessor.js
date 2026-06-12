@@ -62,15 +62,29 @@ export const useImageProcessor = (quizImages, setQuizImages, showAlert) => {
       const isPortrait = currentEdit.settings.isPortrait;
       canvas.width = isPortrait ? 720 : 1280;
       canvas.height = isPortrait ? 1280 : 720;
-
-      ctx.fillStyle = "black"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      const { scale, x, y } = currentEdit.settings;
-      const imgRatio = img.width / img.height;
       const canvasRatio = canvas.width / canvas.height;
+      const imgRatio = img.width / img.height;
 
+      ctx.fillStyle = "black"; 
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 背景のぼかしを描画 (プレビューと合わせる)
+      ctx.save();
+      ctx.filter = 'blur(40px) brightness(0.8)';
+      ctx.globalAlpha = 0.4;
+      // 背景はCover形式で描画
+      let bgW, bgH;
+      if (imgRatio > canvasRatio) { bgH = canvas.height; bgW = canvas.height * imgRatio; }
+      else { bgW = canvas.width; bgH = canvas.width / imgRatio; }
+      ctx.drawImage(img, (canvas.width - bgW * 1.1) / 2, (canvas.height - bgH * 1.1) / 2, bgW * 1.1, bgH * 1.1);
+      ctx.restore();
+      ctx.globalAlpha = 1.0;
+
+      const { scale, x, y } = currentEdit.settings;
       let baseW, baseH;
-      if (imgRatio > canvasRatio) { baseH = canvas.height; baseW = canvas.height * imgRatio; }
-      else { baseW = canvas.width; baseH = canvas.width / imgRatio; }
+      // Containロジックに変更 (画像全体を収める)
+      if (imgRatio > canvasRatio) { baseW = canvas.width; baseH = canvas.width / imgRatio; }
+      else { baseH = canvas.height; baseW = canvas.height * imgRatio; }
 
       const scaledW = baseW * scale; const scaledH = baseH * scale;
       const moveX = scaledW * (x / 100); const moveY = scaledH * (y / 100);

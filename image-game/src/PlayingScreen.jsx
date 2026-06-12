@@ -81,7 +81,7 @@ const QuizBoard = memo(({
 
   const boardClass = isPortrait 
     ? "h-[85vh] aspect-[9/16] rounded-[2rem]"
-    : "max-w-6xl aspect-video rounded-[3rem]";
+    : "max-w-5xl aspect-video rounded-[3rem]";
   
   return (
     <div className={`relative ${isPortrait ? '' : 'w-full'} ${boardClass} shadow-[0_50px_100px_rgba(0,0,0,0.9)] border-[12px] border-white/5 bg-black group transition-all duration-500 ${isStageLoading ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}>
@@ -99,7 +99,7 @@ const QuizBoard = memo(({
             
             <img 
               src={currentImg.url} 
-              className="relative z-10 w-full h-full object-cover" 
+              className="relative z-10 w-full h-full object-contain" 
               style={{ 
                 transform: `scale(${currentImg.settings.scale}) translate(${currentImg.settings.x}%, ${currentImg.settings.y}%)`,
                 willChange: 'transform'
@@ -392,9 +392,27 @@ export default function PlayingScreen({
             />
           </div>
 
-          <div className={`${isPortrait ? 'mt-0 pl-12' : 'mt-12'} flex items-center gap-12 relative`}>
+          <div className={`${isPortrait ? 'mt-0 pl-12' : 'mt-12'} flex items-center gap-12`}>
           {!isCorrectAndWaiting ? (
-            <div className="flex flex-col items-center gap-4 relative">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                {/* 活性時の背後の淡い光 (オーラ) - ボタンより大きく広がるように配置 */}
+                <AnimatePresence>
+                  {pendingJudge && !isJudging && !feedback.visible && (
+                    <motion.div
+                      key="judge-aura"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ 
+                        opacity: [0, 0.6, 0],
+                        scale: [1, 1.8, 1],
+                      }}
+                      exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                      className="absolute inset-0 bg-indigo-500 rounded-full blur-[60px] -z-10"
+                    />
+                  )}
+                </AnimatePresence>
+
               {/* ジャッジ判明時のバーストエフェクト */}
               <AnimatePresence>
                 {feedback.visible && (
@@ -421,14 +439,26 @@ export default function PlayingScreen({
                 key={`judge-button-${pendingJudge || 'none'}`}
                 initial={pendingJudge ? { scale: 0.9, opacity: 0.8 } : {}}
                 animate={{
-                  scale: feedback.visible ? 2.5 : (isJudging ? 1.4 : (pendingJudge ? 1 : 1)),
+                      scale: feedback.visible ? 2.5 : (isJudging ? 1.4 : (pendingJudge ? [1, 1.08, 1] : 1)),
                   x: (isJudging || feedback.visible) && isPortrait ? -450 : 0,
                   y: (isJudging || feedback.visible) && !isPortrait ? -300 : 0,
                   opacity: (feedback.visible || (isStageLoading && !isJudging)) ? 0 : (pendingJudge ? 1 : 0.8),
-                  boxShadow: isJudging ? "0 0 80px rgba(99,102,241,0.8)" : (pendingJudge ? "0 0 40px rgba(99,102,241,0.5)" : "none"),
+                  boxShadow: isJudging
+                    ? "0 0 80px rgba(99,102,241,0.8)"
+                    : (pendingJudge
+                        ? [
+                            "0 0 40px 5px rgba(99,102,241,0.4)",
+                            "0 0 120px 35px rgba(99,102,241,0.7)",
+                            "0 0 40px 5px rgba(99,102,241,0.4)"
+                          ]
+                        : "none"),
                   zIndex: (isJudging || feedback.visible) ? 150 : 10
                 }}
-                transition={feedback.visible ? { duration: 0.4, ease: "easeOut" } : { type: "spring", stiffness: 300, damping: 25 }}
+                    transition={feedback.visible ? { duration: 0.4, ease: "easeOut" } : { 
+                      type: "spring", stiffness: 300, damping: 25,
+                      scale: (pendingJudge && !isJudging) ? { repeat: Infinity, duration: 1.5, ease: "easeInOut" } : undefined,
+                      boxShadow: (pendingJudge && !isJudging) ? { repeat: Infinity, duration: 1.5, ease: "easeInOut" } : undefined
+                    }}
                 disabled={!pendingJudge || isJudging || isStageLoading}
                 onClick={startJudging}
                 className={`relative w-56 h-56 rounded-full font-black text-3xl shadow-2xl uppercase italic tracking-tighter overflow-hidden border-[12px] flex items-center justify-center transition-colors duration-300 will-change-transform
@@ -461,6 +491,7 @@ export default function PlayingScreen({
                   )}
                 </span>
               </motion.button>
+              </div>
               <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em]">
                 A (Correct) / D (Incorrect)
               </p>

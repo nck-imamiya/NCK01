@@ -40,7 +40,7 @@ export default function SetupScreen({
           <div className="flex items-center justify-between">
             <h1 className="text-5xl font-black text-indigo-900 flex items-center gap-4 italic mb-2 tracking-tighter">
               <Camera className="w-12 h-12 text-indigo-500" />
-              画像当てマスター（仮）
+              NCK画像クイズVer2.0
             </h1>
             <button 
               onClick={() => setGameState('design_test')}

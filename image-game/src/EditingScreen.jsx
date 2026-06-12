@@ -7,12 +7,32 @@ export default function EditingScreen({
   editIdx, setEditIdx,
   updateImageSetting,
   downloadImage,
+  panelConfig,
+  getGridClass,
+  tetrisLayout,
   exportCanvasRef,
   setGameState,
   startGame,
   msg,
 }) {
   const currentEdit = quizImages[editIdx];
+
+  // グリッドプレビュー用のセル生成
+  const renderGridPreview = () => {
+    const isPortrait = currentEdit.settings.isPortrait;
+    const gridClass = getGridClass(isPortrait);
+    
+    // パネル枚数に応じたセル数を計算
+    let cellCount = typeof panelConfig === 'number' ? panelConfig : 40; // テトリスは8x5=40
+    
+    return (
+      <div className={`absolute inset-0 grid ${gridClass} gap-0 z-20 pointer-events-none opacity-30`}>
+        {[...Array(cellCount)].map((_, i) => (
+          <div key={i} className="border border-white/50 border-dashed" />
+        ))}
+      </div>
+    );
+  };
 
   if (!currentEdit) return null;
 
@@ -30,15 +50,23 @@ export default function EditingScreen({
           準備完了
         </button>
       </div>
-      <div className="flex-1 flex flex-col lg:flex-row p-6 gap-8 items-center justify-center overflow-y-auto">
-        <div className="w-full lg:w-3/4 flex flex-col items-center">
+      <div className="flex-1 flex flex-col lg:flex-row p-6 gap-8 items-center justify-center overflow-y-auto bg-slate-100/50">
+        <div className="w-full lg:w-2/3 flex flex-col items-center">
            <div className="w-full bg-slate-200 p-2 rounded-[2.5rem] shadow-inner">
              <div className={`relative mx-auto bg-black rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white transition-all duration-300 ${
-               currentEdit.settings.isPortrait ? 'h-[85vh] aspect-[9/16]' : 'w-full aspect-video'
+               currentEdit.settings.isPortrait ? 'h-[85vh] aspect-[9/16]' : 'max-w-5xl aspect-video'
              }`}>
-                <div className="w-full h-full flex items-center justify-center">
-                  <img src={currentEdit.url} className="w-full h-full object-cover" 
-                       style={{ transform: `scale(${currentEdit.settings.scale}) translate(${currentEdit.settings.x}%, ${currentEdit.settings.y}%)`, transition: 'transform 0.1s ease-out' }} alt="edit" />
+                <div className="relative w-full h-full flex items-center justify-center bg-black">
+                  {/* 背景のぼかし演出 (ゲーム画面と統一) */}
+                  <img 
+                    src={currentEdit.url} 
+                    className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110" 
+                    aria-hidden="true"
+                  />
+                  {/* グリッドプレビュー */}
+                  {renderGridPreview()}
+                  <img src={currentEdit.url} className="relative z-10 w-full h-full object-contain" 
+                       style={{ transform: `scale(${currentEdit.settings.scale}) translate(${currentEdit.settings.x}%, ${currentEdit.settings.y}%)`, transition: 'transform 0.05s ease-out' }} alt="edit" />
                 </div>
                 <div className="absolute inset-0 pointer-events-none border-[12px] border-black/10 ring-1 ring-inset ring-white/20"></div>
              </div>
@@ -54,7 +82,7 @@ export default function EditingScreen({
             <div className="space-y-6">
               <div>
                 <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase mb-3"><span>ズーム</span><span className="text-indigo-600">{Math.round(currentEdit.settings.scale * 100)}%</span></div>
-                <input type="range" min="1" max="4" step="0.05" value={currentEdit.settings.scale} onChange={(e) => updateImageSetting(editIdx, { scale: parseFloat(e.target.value) })} className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                <input type="range" min="0.1" max="4" step="0.05" value={currentEdit.settings.scale} onChange={(e) => updateImageSetting(editIdx, { scale: parseFloat(e.target.value) })} className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
               </div>
               <div>
                 <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase mb-3"><span>横位置 (X)</span><span className="text-indigo-600">{currentEdit.settings.x}%</span></div>
